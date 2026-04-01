@@ -41,6 +41,28 @@ PawPal+ includes four algorithmic features that make the scheduler more intellig
 - **Recurring tasks** — Tasks can be set to `"daily"` or `"weekly"` recurrence. When a recurring task is marked complete, a new instance is automatically created with the next due date calculated using Python's `timedelta`. Future-dated tasks are excluded from today's schedule until their day arrives.
 - **Conflict detection** — The scheduler checks every pair of scheduled tasks for overlapping time windows and labels each conflict as `SAME-PET` (physically impossible) or `CROSS-PET` (may need coordination). Warnings are displayed without crashing the program, so the owner stays in control.
 
+## Testing PawPal+
+
+Run the full test suite with:
+
+```bash
+python -m pytest tests/test_pawpal.py -v
+```
+
+The suite includes **18 automated tests** organized into five categories:
+
+| Category | Tests | What they verify |
+|----------|-------|------------------|
+| Schedule generation | 2 | Tasks are sorted by scheduled time first, then by priority/duration. Only tasks within the time budget are included. |
+| Recurring tasks | 3 | Daily completion creates a task due tomorrow (+1 day). Weekly creates one due next week (+7 days). Non-recurring tasks produce no new instance. |
+| Conflict detection | 3 | Same-pet overlaps produce a SAME-PET warning. Cross-pet overlaps produce a CROSS-PET warning. Non-overlapping tasks produce zero conflicts. |
+| Filtering | 3 | Filter by pet name, by completion status, or both combined. |
+| Edge cases | 7 | No pets, no tasks, zero available time, task too long, future-dated recurring task, all tasks completed, two tasks at exact same time. |
+
+**Confidence Level: 4/5 stars**
+
+The test suite covers all core scheduling behaviors, both happy paths and edge cases. The one star deducted is because the tests do not yet cover the Streamlit UI layer (app.py) or multi-day scheduling scenarios where recurring tasks chain across several days.
+
 ### Suggested workflow
 
 1. Read the scenario carefully and identify requirements and edge cases.
