@@ -57,10 +57,26 @@ Yes, two changes were made after reviewing the skeleton with AI:
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
 - How did you decide which constraints mattered most?
 
+The scheduler considers three constraints, in order of importance:
+
+1. **Scheduled time** — Tasks with a specific time slot (e.g., 07:00) are placed first and sorted chronologically. A vet appointment at 9 AM can't be moved, so fixed-time tasks always take priority in ordering.
+2. **Priority level** (HIGH > MEDIUM > LOW) — Among tasks without a fixed time, high-priority tasks are scheduled before lower ones. This ensures critical care (medication, feeding) happens before optional activities (enrichment, grooming).
+3. **Available time budget** — The scheduler only includes tasks that fit within the owner's daily available minutes. It greedily fills the schedule by trying shorter tasks first within each priority tier, maximizing the number of tasks that fit.
+
+These constraints were ranked by real-world urgency: you can't miss a timed appointment, you shouldn't skip medication, and you work within the hours you actually have.
+
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
+
+**Tradeoff: Conflict detection warns but does not resolve.**
+
+The `_detect_conflicts()` method identifies overlapping time windows and labels them as SAME-PET or CROSS-PET warnings, but it does not automatically move or remove conflicting tasks. The schedule still includes both overlapping tasks.
+
+*Why this is reasonable:* A pet care app should inform the owner, not make decisions for them. A CROSS-PET conflict (walking the dog while feeding the cat) might actually be fine if another family member helps. A SAME-PET conflict (two tasks for Buddy at 07:00) is more serious but the owner might want to choose which one to reschedule. Automatically dropping or rearranging tasks could hide important care activities. The warning-based approach keeps the owner in control.
+
+*Alternative considered:* Using `itertools.combinations` to check all pairs would be more "Pythonic" (one line instead of a nested loop), but it loses the early-break optimization. Since the task list is sorted by start time, once task A's end time doesn't reach task B's start, no later task can overlap with A either. This makes the average case faster than O(n^2). For a small pet care app the difference is negligible, but the explicit loop is also easier to read and debug, so we kept it.
 
 ---
 
