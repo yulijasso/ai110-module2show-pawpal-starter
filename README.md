@@ -4,7 +4,7 @@
 
 ## Demo
 
-<a href="/course_images/ai110/pawpal_demo.jpeg" target="_blank"><img src='/course_images/ai110/pawpal_demo.jpeg' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
+![PawPal App](pawpal_demo.jpeg)
 
 ## Features
 
