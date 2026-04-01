@@ -87,10 +87,49 @@ The `_detect_conflicts()` method identifies overlapping time windows and labels 
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
 - What kinds of prompts or questions were most helpful?
 
+I used AI (Claude Code) across every phase of the project:
+
+- **Phase 1 (Design):** Asked AI to review my UML class diagram and suggest missing attributes. This is how `pet_name` was added to Task and `Priority` was changed from a string to an IntEnum — both suggestions that I validated before accepting.
+- **Phase 2 (Implementation):** Used AI to scaffold class stubs from the UML, then iteratively build out methods like `generate_plan()` and `get_explanation()`. I gave step-by-step instructions rather than asking for everything at once.
+- **Phase 3 (Algorithms):** Asked AI to implement sorting, filtering, conflict detection, and recurring tasks. The most helpful prompt was asking it to *plan* the features first (listing what each one needed) before writing code, so I could review the approach.
+- **Phase 4 (Testing):** Asked AI for a test plan targeting happy paths and edge cases, then had it implement 18 tests. I reviewed each test to make sure it was actually testing meaningful behavior, not just confirming trivial things.
+- **Phase 5 (Polish):** Used AI to wire the Scheduler methods into the Streamlit UI, update the UML diagram to match the final code, and draft the README.
+
+The most helpful prompts were specific and scoped — for example, "What are the most important edge cases to test for a pet scheduler with sorting and recurring tasks?" produced better results than vague requests like "write tests."
+
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
 - How did you evaluate or verify what the AI suggested?
+
+When evaluating the `_detect_conflicts()` method, AI considered replacing the nested loop with `itertools.combinations` for a more "Pythonic" one-liner. I rejected this because:
+
+1. The current sorted-list approach has an **early break** — once task A no longer overlaps task B, it skips ahead. `itertools.combinations` would check every pair regardless, making it always O(n^2).
+2. The explicit loop is **easier to read and debug** for someone learning Python. You can follow the logic step by step.
+3. For a pet care app with a small number of tasks, the performance difference is negligible, but the readability difference matters for maintainability.
+
+I verified by running the test suite after the refactor (extracting `_fmt_time()` and switching to `enumerate`) to confirm all 18 tests still passed. The algorithm stayed the same; only the formatting was cleaned up.
+
+**c. AI strategy reflection**
+
+- Which AI features were most effective for building your scheduler?
+- Give one example of an AI suggestion you rejected or modified to keep your system design clean.
+- How did using separate chat sessions for different phases help you stay organized?
+- What did you learn about being the "lead architect" when collaborating with AI tools?
+
+**Most effective AI features:** The ability to ask AI to *plan before coding* was the most valuable pattern. Before implementing sorting, filtering, conflict detection, and recurrence, I had AI produce a table of what each feature needed (where it goes, what logic it uses). This let me review and approve the design before any code was written, catching issues early.
+
+**Suggestion I rejected:** AI initially handled recurring tasks by simply resetting the `completed` flag to `False` inside `_collect_eligible_tasks()`. This was a shortcut — it mutated the task in place with no date tracking, so there was no way to know *when* the next occurrence was due. I had this replaced with proper `due_date` + `timedelta` logic so that completing a daily task creates a genuinely new Task instance due tomorrow. This was more complex but gave the system real date awareness.
+
+**Separate sessions for organization:** Working on different phases in focused sessions prevented context from getting muddled. The design session stayed clean (UML, class responsibilities), the algorithm session focused on sorting/filtering/conflicts without UI distractions, and the testing session could approach the code as a "fresh reviewer." Each session had a clear goal and deliverable.
+
+**Being the lead architect:** The most important lesson was that AI is a powerful *implementer* but a mediocre *decision-maker*. It will confidently produce code for whatever approach you describe, even if that approach has flaws. My job was to:
+1. Define the requirements and constraints before asking for code
+2. Review every suggestion against the overall system design
+3. Say "no" to clever shortcuts that would make the system harder to understand or extend
+4. Verify with tests, not trust
+
+AI accelerated every phase, but the quality of the final system depended on my judgment about *what to build* and *what to keep*.
 
 ---
 
@@ -101,10 +140,30 @@ The `_detect_conflicts()` method identifies overlapping time windows and labels 
 - What behaviors did you test?
 - Why were these tests important?
 
+The test suite covers five categories with 18 tests total:
+
+1. **Schedule generation (2 tests):** Verified that tasks are sorted by scheduled time first, then by priority/duration, and that only tasks fitting within the available time budget are included. These are important because sorting and time-budgeting are the core logic of the scheduler — if these break, the entire app produces wrong plans.
+
+2. **Recurring tasks (3 tests):** Confirmed that completing a daily task creates a new one due tomorrow (+1 day via timedelta), a weekly task creates one due in 7 days, and a non-recurring task returns None. These matter because incorrect recurrence logic could cause tasks to disappear, duplicate endlessly, or show up on the wrong day.
+
+3. **Conflict detection (3 tests):** Verified that same-pet overlaps produce SAME-PET warnings, cross-pet overlaps produce CROSS-PET warnings, and non-overlapping tasks produce zero conflicts. Without these, the owner could unknowingly schedule impossible overlaps.
+
+4. **Filtering (3 tests):** Tested filtering by pet name, by completion status, and both combined. Filtering is used throughout the UI — broken filters would show the wrong tasks everywhere.
+
+5. **Edge cases (7 tests):** Covered no pets, no tasks, zero available time, a task longer than available time, future-dated recurring tasks, all tasks completed, and two tasks at the exact same time. These prevent crashes and incorrect behavior at boundary conditions that are easy to miss during manual testing.
+
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
 - What edge cases would you test next if you had more time?
+
+**Confidence: 4 out of 5 stars.** All 18 tests pass and cover the core scheduling logic, recurrence, conflicts, filtering, and key edge cases. The scheduler produces correct plans in every scenario I've tested.
+
+If I had more time, I would test:
+- **Multi-day recurrence chains:** Complete a daily task 5 days in a row and verify each new instance has the correct due date.
+- **Large task lists:** 50+ tasks to check performance and verify the greedy algorithm still makes sensible choices.
+- **Streamlit UI integration:** Automated browser tests (e.g., with Selenium) to verify that button clicks, dropdowns, and session state work correctly end-to-end.
+- **Concurrent recurring + conflict:** A recurring task that conflicts with another task every time it regenerates.
 
 ---
 
@@ -114,10 +173,18 @@ The `_detect_conflicts()` method identifies overlapping time windows and labels 
 
 - What part of this project are you most satisfied with?
 
+I'm most satisfied with the **conflict detection system**. It evolved from a simple adjacent-pair check to a comprehensive algorithm that compares all pairs with an early-break optimization, labels conflicts as SAME-PET or CROSS-PET, and displays them as clear warnings in the UI. It's the feature that makes PawPal+ feel like a real scheduling tool rather than just a to-do list — it actively helps the owner avoid mistakes.
+
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
 
+I would add **conflict resolution suggestions**, not just detection. When the scheduler finds a SAME-PET conflict, it could suggest moving one task to the nearest open time slot. For CROSS-PET conflicts, it could ask whether another family member can help, or offer to stagger the tasks. This would close the loop from "here's the problem" to "here's a solution."
+
+I would also redesign the **task completion flow in the UI** to support bulk actions — marking multiple tasks as done at once rather than one at a time through a dropdown.
+
 **c. Key takeaway**
 
 - What is one important thing you learned about designing systems or working with AI on this project?
+
+**Design first, code second.** The phases where I planned before implementing (UML before classes, feature tables before algorithms, test plans before tests) produced cleaner, more intentional code. The phases where I jumped straight into coding required more rework. AI makes it tempting to skip planning because it can generate code so fast — but fast code that solves the wrong problem is worse than slow code that solves the right one. The human's job is to define *what right looks like* before letting AI help build it.
